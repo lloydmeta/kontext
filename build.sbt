@@ -1,4 +1,4 @@
-lazy val theVersion = "0.1.0-SNAPSHOT"
+lazy val theVersion = "0.1.0"
 
 lazy val theScalaVersion  = "2.11.11"
 lazy val scalaVersions    = Seq("2.11.11", "2.12.2")
@@ -27,6 +27,7 @@ lazy val macros = crossProject
     metaMacroSettings,
     testSettings,
     publishSettings,
+    commonSettings,
     // A dependency on scala.meta is required to write new-style macros, but not
     // to expand such macros.  This is similar to how it works for old-style
     // macros and a dependency on scala.reflect.
@@ -68,7 +69,7 @@ lazy val testSettings = {
 
 lazy val commonSettings = Seq(
   organization := "com.beachape",
-  version := "0.1.0",
+  version := theVersion,
   scalacOptions ++= Seq(
     "-deprecation",
     "-encoding",
