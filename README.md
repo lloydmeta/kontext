@@ -1,4 +1,4 @@
-# kontext
+# kontext [![Build Status](https://travis-ci.org/lloydmeta/kontext.svg?branch=master)](https://travis-ci.org/lloydmeta/kontext)
 
 `implicitly` but for _all_ context-bound typeclass instances, automatically.
 
