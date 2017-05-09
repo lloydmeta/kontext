@@ -32,6 +32,19 @@ class BoundlySpec extends FunSpec with Matchers {
 
   describe("boundly-annotated method") {
 
+    describe("compilation failures") {
+
+      it("should fail if there is a repeated context bound") {
+        """
+          |@boundly
+          |def singleTypeParam[F[_]: First: Second: Third: Second]: Seq[String] = {
+          |  Seq(First.hello, Second.hello, Third.hello)
+          |}
+        """.stripMargin shouldNot compile
+      }
+
+    }
+
     describe("when there is just one bounded type parameter") {
 
       @boundly
