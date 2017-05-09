@@ -56,37 +56,69 @@ class BoundsImporter(annotationNew: Stat, methodTree: Defn.Def) {
   }
 
   private def detectErrors: Seq[String] = {
-    val unsupportedTypes =
-      BoundsImporter.findUnsupportedTypes(tparams.flatMap(_.cbounds))
-    val unsupportedTypeErrMsg = if (unsupportedTypes.nonEmpty) {
-      val tpeString = unsupportedTypes.map(tpe => s"    * $tpe").mkString("\n")
-      Some(s"""
-              |
-              |  The following typeclass bounds are not supported by this macro, maybe try importing them fully
-              |  (perhaps with qualified names)?
-              |
-              |  $tpeString
-         """.stripMargin)
+    val unsupportedCBounds = BoundsImporter.findUnsupportedTparams(tparams)
+    val unsupportedCBoundsErrMsg = if (unsupportedCBounds.nonEmpty) {
+      val tparamString = unsupportedCBounds.map { case (tp, err) =>
+          s"""  [ $tp ] has the following errors:
+             |  $err
+           """.stripMargin
+      }
+      Some(tparamString.mkString("\n"))
+
     } else None
     val unsupportedMappings =
       BoundsImporter.findUnsupportedMappingPairs(renamingAst)
     val unsupportedMappingsErr = if (unsupportedMappings.nonEmpty) {
       val mappingString =
         unsupportedMappings.map(m => s"    * ${m.syntax}").mkString("\n")
-      Some(s"""
-              |
-              |  The following mappings are not supported for renaming. Please try using simple literal symbol
+      Some(s"""  The following mappings are not supported for renaming. Please try using simple literal symbol
               |  syntax (e.g. `'Monad -> 'M `)
               |
               |  $mappingString
            """.stripMargin)
     } else None
-    Seq(unsupportedTypeErrMsg, unsupportedMappingsErr).flatten
+    Seq(unsupportedCBoundsErrMsg, unsupportedMappingsErr).flatten
   }
 
 }
 
 object BoundsImporter {
+
+  def findUnsupportedTparams(tparams: Seq[Type.Param]): Seq[(Type.Param, String)] = {
+    val tpsWithErrs = for {
+      tp <- tparams
+      cboundz= tp.cbounds
+      cboundNames = cboundz.collect(typeToName)
+    } yield {
+      val dupCBounds = cboundNames.diff(cboundNames.distinct)
+      val errMsges = if (dupCBounds.isEmpty) {
+        Seq.empty
+      } else {
+        val dupeString = dupCBounds.map(tpe => s"    * $tpe").mkString("\n")
+        val errMsg = s"""|
+                         |  The following context bounds were repeated, please make sure your bounds are unique:
+                         |
+                         |    $dupeString
+         """.stripMargin
+        Seq(errMsg)
+      }
+      val unsupportedCboundTypes = findUnsupportedTypes(cboundz)
+      val errs = if (unsupportedCboundTypes.isEmpty) {
+        errMsges
+      }      else {
+        val tpeString = unsupportedCboundTypes.map(tpe => s"    * $tpe").mkString("\n")
+        val errMsg = s"""|
+                         |  The following typeclass bounds are not supported by this macro, maybe try importing them fully
+                         |  (perhaps with qualified names)?:
+                         |
+                         |    $tpeString
+         """.stripMargin
+        errMsges :+ errMsg
+      }
+      (tp, errs)
+    }
+    tpsWithErrs.collect { case (tp, errs) if errs.nonEmpty => (tp, errs.mkString("\n"))}
+  }
 
   def findUnsupportedMappingPairs(mappings: Seq[Term.Arg]): Seq[Term.Arg] =
     for {
